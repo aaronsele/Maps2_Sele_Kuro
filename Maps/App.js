@@ -157,16 +157,6 @@ export default function App() {
         }}
         showsUserLocation={true}
       >
-        {/* Ubicación actual */}
-        <Marker
-          coordinate={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          title="Yo estoy aquí"
-          pinColor="blue"
-        />
-
         {/* Markers hardcodeados + dinámicos */}
         {markers.map((m) => (
           <Marker key={m.id} coordinate={m.coordinate} title={m.title} />
