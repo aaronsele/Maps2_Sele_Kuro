@@ -15,7 +15,12 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para mostrar el mapa"
+        "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para mostrar el mapa.",
+        "NSCameraUsageDescription": "Necesitamos acceso a la cámara para sacar fotos de tus lugares.",
+        "NSPhotoLibraryAddUsageDescription": "Necesitamos guardar las fotos en tu galería."
+      },
+      "config": {
+        "googleMapsApiKey": "TU_API_KEY_DE_GOOGLE_MAPS"
       }
     },
     "android": {
@@ -24,8 +29,25 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "TU_API_KEY_DE_GOOGLE_MAPS"
+        }
+      }
     },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "La app usa tu ubicación para mostrarte en el mapa."
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
