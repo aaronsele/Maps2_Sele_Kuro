@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, TextInput } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
@@ -7,31 +7,34 @@ import * as Location from "expo-location";
 export default function CameraScreen() {
   const navigation = useNavigation();
 
-  // Permisos de cámara (hook nativo de expo-camera)
+  // Permisos de cámara
   const [camPermission, requestCamPermission] = useCameraPermissions();
 
   // Estado de cámara
   const cameraRef = useRef(null);
   const [facing, setFacing] = useState("back"); // "back" | "front"
-  const [torchOn, setTorchOn] = useState(false); // linterna continua
+  const [torchOn, setTorchOn] = useState(false);
   const [photoUri, setPhotoUri] = useState(null);
+
+  // Modal para nombre
+  const [nameModalVisible, setNameModalVisible] = useState(false);
+  const [photoName, setPhotoName] = useState("");
 
   // Pedir permisos de cámara + ubicación al entrar
   useEffect(() => {
     (async () => {
-      // Cámara
       if (!camPermission?.granted) {
         await requestCamPermission();
       }
-      // Ubicación
+      // OJO: tenías un typo "rquest"
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         // seguimos, pero sin guardar ubicación
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Estados intermedios de permisos
   if (!camPermission) {
     return (
       <View style={styles.center}>
@@ -64,9 +67,20 @@ export default function CameraScreen() {
     setPhotoUri(pic?.uri ?? null);
   };
 
-  const discardPhoto = () => setPhotoUri(null);
+  const discardPhoto = () => {
+    setPhotoUri(null);
+    setPhotoName("");
+    setNameModalVisible(false);
+  };
 
-  const savePhoto = async () => {
+  // Abre el modal para pedir el nombre antes de guardar
+  const askForName = () => {
+    setPhotoName("");
+    setNameModalVisible(true);
+  };
+
+  // Guardar foto con nombre
+  const savePhoto = async (name) => {
     try {
       // Obtener ubicación actual (si el usuario lo permitió)
       let coords = null;
@@ -80,23 +94,30 @@ export default function CameraScreen() {
           longitude: loc.coords.longitude,
         };
       }
-  
-      // Armar nuevo marcador para el mapa
+
+      const title = name?.trim() || "Foto guardada";
+
       const newMarker = {
         id: Date.now(),
-        title: "Foto guardada",
-        coordinate: coords ?? { latitude: -34.6037, longitude: -58.3816 }, // fallback si no hay permisos
+        title,
+        coordinate: coords ?? { latitude: -34.6037, longitude: -58.3816 }, // fallback
         photoUri: photoUri,
       };
-  
-      // Navegar al mapa pasando el marcador
+
       navigation.navigate("MapScreen", { newMarker });
-  
-      // Limpiar estado local
+
       setPhotoUri(null);
+      setPhotoName("");
+      setNameModalVisible(false);
     } catch (e) {
       console.warn("No se pudo guardar la foto:", e);
     }
+  };
+
+  const confirmSave = () => {
+    const name = photoName.trim();
+    if (!name) return;
+    savePhoto(name);
   };
 
   return (
@@ -106,11 +127,9 @@ export default function CameraScreen() {
           <CameraView
             ref={cameraRef}
             style={styles.camera}
-            facing={facing}           // "back" | "front"
-            enableTorch={torchOn}     // linterna continua
+            facing={facing}
+            enableTorch={torchOn}
           />
-
-          {/* Controles superpuestos */}
           <View style={styles.controlsBar}>
             <TouchableOpacity style={styles.smallBtn} onPress={toggleFacing}>
               <Text style={styles.smallBtnText}>↺ Cámara</Text>
@@ -134,10 +153,44 @@ export default function CameraScreen() {
               <Text style={styles.buttonText}>Descartar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.button, { backgroundColor: "#4CAF50" }]} onPress={savePhoto}>
+            <TouchableOpacity style={[styles.button, { backgroundColor: "#4CAF50" }]} onPress={askForName}>
               <Text style={styles.buttonText}>Guardar</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Modal para ingresar nombre */}
+          <Modal
+            visible={nameModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setNameModalVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>Nombre de la foto</Text>
+                <TextInput
+                  value={photoName}
+                  onChangeText={setPhotoName}
+                  placeholder="Ej: Plaza Francia 1"
+                  placeholderTextColor="#999"
+                  style={styles.input}
+                  autoFocus
+                />
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#9E9E9E" }]} onPress={() => setNameModalVisible(false)}>
+                    <Text style={styles.modalBtnText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: photoName.trim() ? "#4CAF50" : "#A5D6A7" }]}
+                    onPress={confirmSave}
+                    disabled={!photoName.trim()}
+                  >
+                    <Text style={styles.modalBtnText}>Guardar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </View>
       )}
     </View>
@@ -195,4 +248,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: { color: "#fff", fontWeight: "bold" },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 14,
+    padding: 16,
+  },
+  modalTitle: { color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 10 },
+  input: {
+    backgroundColor: "#2A2A2A",
+    color: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  modalActions: { flexDirection: "row", gap: 10, justifyContent: "flex-end" },
+  modalBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+  modalBtnText: { color: "#fff", fontWeight: "700" },
 });
