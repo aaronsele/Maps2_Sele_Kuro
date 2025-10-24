@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 const FALLBACK_REGION = {
-  latitude: -34.6037, // CABA
+  latitude: -34.6037,
   longitude: -58.3816,
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
@@ -29,31 +29,24 @@ const FALLBACK_REGION = {
 
 export default function MapScreen() {
   const [location, setLocation] = useState(null);
-
   const [markers, setMarkers] = useState([
     { id: 1, title: 'Kiosco', coordinate: { latitude: -34.6096, longitude: -58.4303 } },
     { id: 2, title: 'Casa de Torcha', coordinate: { latitude: -34.5909, longitude: -58.4172 } },
   ]);
-
-  const [savedPlaces, setSavedPlaces] = useState([
-    { id: 1, title: 'Kiosco', coordinate: { latitude: -34.6096, longitude: -58.4303 } },
-    { id: 2, title: 'Casa de Torcha', coordinate: { latitude: -34.5909, longitude: -58.4172 } },
-  ]);
-
+  const [savedPlaces, setSavedPlaces] = useState([...markers]);
   const navigation = useNavigation();
   const route = useRoute();
 
-  // --- agregar nuevo marcador cuando vuelve desde CameraScreen
+  // --- agregar marcador desde otra pantalla
   useEffect(() => {
     const incoming = route.params?.newMarker;
     if (incoming && !markers.some(m => m.id === incoming.id)) {
       setMarkers(prev => [...prev, incoming]);
       setSavedPlaces(prev => [...prev, incoming]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.newMarker]);
 
-  // --- permisos y watch de ubicación del usuario
+  // --- permisos y watch de ubicación
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -67,37 +60,29 @@ export default function MapScreen() {
   }, []);
 
   const region = location
-    ? {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }
+    ? { latitude: location.latitude, longitude: location.longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 }
     : FALLBACK_REGION;
 
   // -----------------------
-  //   NUEVA FUNCIÓN “+”
+  // NUEVA FUNCIÓN “+”
   // -----------------------
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [photoName, setPhotoName] = useState('');
   const [addressText, setAddressText] = useState('');
-  const [selectedImages, setSelectedImages] = useState([]); // [{ uri, fileName? }, ...]
-  const [tempCoordinate, setTempCoordinate] = useState(null); // { latitude, longitude }
-  const [selectingLocation, setSelectingLocation] = useState(false); // modo “tocar mapa”
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [tempCoordinate, setTempCoordinate] = useState(null);
+  const [selectingLocation, setSelectingLocation] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Permisos con hooks (mejor UX y manejo de denegación permanente)
   const [libPerm, requestLibPerm] = ImagePicker.useMediaLibraryPermissions();
   const [camPerm, requestCamPerm] = ImagePicker.useCameraPermissions();
 
   const ensureLibraryPermission = useCallback(async () => {
-    // ya concedido
     if (libPerm?.granted) return true;
-    // si está "blocked" (denegado permanente), mandar a settings
     if (libPerm && libPerm.canAskAgain === false) {
       Alert.alert(
         'Permiso requerido',
-        'Habilitá el permiso de Fotos/Galería en Configuración para seleccionar imágenes.',
+        'Habilitá el permiso de Fotos/Galería en Configuración.',
         [
           { text: 'Cancelar', style: 'cancel' },
           { text: 'Abrir configuración', onPress: () => Linking.openSettings() },
@@ -105,7 +90,6 @@ export default function MapScreen() {
       );
       return false;
     }
-    // pedir
     const res = await requestLibPerm();
     return !!res.granted;
   }, [libPerm, requestLibPerm]);
@@ -143,17 +127,19 @@ export default function MapScreen() {
       if (!ok) return;
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true, // SDK 49+ soporta múltiple
+        mediaTypes: 'images', // ⚡ minúscula, para evitar errores
+        allowsMultipleSelection: true,
         quality: 0.9,
-        selectionLimit: 10, // opcional
+        selectionLimit: 10,
       });
 
       if (!result.canceled) {
-        setSelectedImages(result.assets.map(a => ({ uri: a.uri, fileName: a.fileName })));
+        const images = result.assets?.map(a => ({ uri: a.uri, fileName: a.fileName ?? `IMG_${Date.now()}` })) || [];
+        setSelectedImages(images);
       }
     } catch (e) {
       console.warn('Error al seleccionar imágenes:', e);
+      Alert.alert('Error', 'No se pudieron seleccionar las imágenes.');
     }
   }, [ensureLibraryPermission]);
 
@@ -163,15 +149,18 @@ export default function MapScreen() {
       if (!ok) return;
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images', // ⚡ minúscula
         quality: 0.9,
         cameraType: ImagePicker.CameraType.back,
       });
+
       if (!result.canceled) {
-        setSelectedImages(prev => [...prev, ...result.assets.map(a => ({ uri: a.uri, fileName: a.fileName }))]);
+        const images = result.assets?.map(a => ({ uri: a.uri, fileName: a.fileName ?? `CAM_${Date.now()}` })) || [];
+        setSelectedImages(prev => [...prev, ...images]);
       }
     } catch (e) {
       console.warn('Error al abrir cámara:', e);
+      Alert.alert('Error', 'No se pudo abrir la cámara.');
     }
   }, [ensureCameraPermission]);
 
@@ -196,7 +185,7 @@ export default function MapScreen() {
     }
     try {
       const results = await Location.geocodeAsync(addressText.trim());
-      if (!results || results.length === 0) {
+      if (!results?.length) {
         Alert.alert('Sin resultados', 'No se pudo encontrar esa dirección.');
         return;
       }
@@ -210,17 +199,16 @@ export default function MapScreen() {
 
   const startPickOnMap = useCallback(() => {
     Keyboard.dismiss();
-    setAddModalVisible(false);     // oculto modal para poder tocar el mapa
-    setSelectingLocation(true);    // mostrar banner y esperar un toque en el mapa
+    setAddModalVisible(false);
+    setSelectingLocation(true);
   }, []);
 
-  // Capturar toque en el mapa cuando estamos en “selectingLocation”
   const handleMapPress = useCallback((e) => {
     if (!selectingLocation) return;
     const coord = e.nativeEvent.coordinate;
     setTempCoordinate(coord);
     setSelectingLocation(false);
-    setAddModalVisible(true); // reabrimos el modal con la coord elegida
+    setAddModalVisible(true);
   }, [selectingLocation]);
 
   const saveFromAddFlow = useCallback(async () => {
@@ -234,23 +222,16 @@ export default function MapScreen() {
     }
 
     setSaving(true);
-
     try {
       let finalCoord = tempCoordinate;
 
-      // Si no hay coord seleccionada y hay dirección, intentamos geocodificar
       if (!finalCoord && addressText.trim()) {
         try {
           const results = await Location.geocodeAsync(addressText.trim());
-          if (results?.length) {
-            finalCoord = { latitude: results[0].latitude, longitude: results[0].longitude };
-          }
-        } catch (e) {
-          console.warn('Geocode al guardar falló:', e);
-        }
+          if (results?.length) finalCoord = { latitude: results[0].latitude, longitude: results[0].longitude };
+        } catch (e) { console.warn('Geocode al guardar falló:', e); }
       }
 
-      // Si sigue sin coord, probamos ubicación actual
       if (!finalCoord) {
         try {
           const perm = await Location.requestForegroundPermissionsAsync();
@@ -258,17 +239,11 @@ export default function MapScreen() {
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             finalCoord = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
           }
-        } catch (e) {
-          console.warn('Ubicación actual al guardar falló:', e);
-        }
+        } catch (e) { console.warn('Ubicación actual al guardar falló:', e); }
       }
 
-      // Fallback final si no se obtuvo nada
-      if (!finalCoord) {
-        finalCoord = { latitude: FALLBACK_REGION.latitude, longitude: FALLBACK_REGION.longitude };
-      }
+      if (!finalCoord) finalCoord = { latitude: FALLBACK_REGION.latitude, longitude: FALLBACK_REGION.longitude };
 
-      // Crear un marcador por cada foto seleccionada
       const baseTitle = photoName.trim();
       const newItems = selectedImages.map((img, idx) => ({
         id: Date.now() + idx,
@@ -280,7 +255,6 @@ export default function MapScreen() {
       setMarkers(prev => [...prev, ...newItems]);
       setSavedPlaces(prev => [...prev, ...newItems]);
 
-      // limpiar y cerrar
       setAddModalVisible(false);
       setPhotoName('');
       setAddressText('');
@@ -302,58 +276,35 @@ export default function MapScreen() {
         {markers.map(m => (
           <Marker key={m.id} coordinate={m.coordinate} title={m.title}>
             {m.photoUri && (
-              <Image
-                source={{ uri: m.photoUri }}
-                style={{ width: 50, height: 50, borderRadius: 25 }}
-              />
+              <Image source={{ uri: m.photoUri }} style={{ width: 50, height: 50, borderRadius: 25 }} />
             )}
           </Marker>
         ))}
 
-        {/* Pin temporal mientras el usuario elige coord */}
         {selectingLocation && tempCoordinate && (
           <Marker coordinate={tempCoordinate} title="Ubicación seleccionada" />
         )}
       </MapView>
 
-      {/* Banner cuando está en modo seleccionar en el mapa */}
       {selectingLocation && (
         <View style={styles.banner}>
           <Text style={styles.bannerText}>Tocá en el mapa para elegir la ubicación</Text>
         </View>
       )}
 
-      {/* Botón abrir cámara */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CameraScreen')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CameraScreen')}>
         <Text style={styles.fabText}>📷</Text>
       </TouchableOpacity>
 
-      {/* Botón ver lugares */}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 100 }]}
-        onPress={() => navigation.navigate('PlacesScreen', { places: savedPlaces })}
-      >
+      <TouchableOpacity style={[styles.fab, { bottom: 100 }]} onPress={() => navigation.navigate('PlacesScreen', { places: savedPlaces })}>
         <Text style={styles.fabText}>📄</Text>
       </TouchableOpacity>
 
-      {/* NUEVO: Botón “+” para agregar desde galería / cámara y elegir ubicación */}
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 160 }]}
-        onPress={openAddFlow}
-      >
+      <TouchableOpacity style={[styles.fab, { bottom: 160 }]} onPress={openAddFlow}>
         <Text style={styles.fabText}>＋</Text>
       </TouchableOpacity>
 
-      {/* Modal de alta de lugares */}
-      <Modal
-        visible={addModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAddModalVisible(false)}
-      >
+      <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
             behavior={Platform.select({ ios: 'padding', android: undefined })}
@@ -362,10 +313,7 @@ export default function MapScreen() {
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Agregar fotos al mapa</Text>
 
-              <ScrollView
-                contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
-                keyboardShouldPersistTaps="handled"
-              >
+              <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
                 <View>
                   <Text style={styles.label}>Nombre</Text>
                   <TextInput
@@ -459,61 +407,18 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#eee' },
   map: { flex: 1 },
-
-  // FABs
-  fab: {
-    position: 'absolute',
-    bottom: 40,
-    right: 20,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#2196F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-    elevation: 3,
-  },
+  fab: { position: 'absolute', bottom: 40, right: 20, width: 54, height: 54, borderRadius: 27, backgroundColor: '#2196F3', alignItems: 'center', justifyContent: 'center', zIndex: 3, elevation: 3 },
   fabText: { color: '#fff', fontSize: 22, fontWeight: '900' },
-
-  // Banner selección
-  banner: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderRadius: 10,
-    zIndex: 4,
-  },
+  banner: { position: 'absolute', top: 20, left: 20, right: 20, padding: 10, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: 10, zIndex: 4 },
   bannerText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
-
-  // Modal
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    maxHeight: '80%',
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-  },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalCard: { maxHeight: '80%', backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   label: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
-  input: {
-    backgroundColor: '#f2f2f2',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
+  input: { backgroundColor: '#f2f2f2', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   btn: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
   btnText: { color: '#fff', fontWeight: '700' },
   coordsText: { marginTop: 6, color: '#333' },
-
   thumb: { width: 64, height: 64, borderRadius: 8 },
 });

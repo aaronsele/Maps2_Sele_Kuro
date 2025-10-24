@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, SafeAreaView } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 
 const fallbackLugares = [
@@ -12,13 +12,15 @@ export default function PlacesScreen() {
   const places = route.params?.places ?? fallbackLugares;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Lugares Guardados</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>📍 Lugares Guardados</Text>
+      </View>
 
       <FlatList
         data={places}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 30, paddingTop: 8 }}
         renderItem={({ item }) => {
           const lat = item.coordinate?.latitude?.toFixed(6);
           const lng = item.coordinate?.longitude?.toFixed(6);
@@ -41,28 +43,47 @@ export default function PlacesScreen() {
           );
         }}
         ListEmptyComponent={
-          <Text style={{ textAlign: 'center', color: '#777', marginTop: 20 }}>
+          <Text style={{ textAlign: 'center', color: '#777', marginTop: 20, fontSize: 16 }}>
             Aún no hay lugares guardados.
           </Text>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
+  container: { flex: 1, backgroundColor: '#f2f2f2' },
+  header: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f6f6f6',
-    marginBottom: 10,
+    padding: 14,
+    backgroundColor: '#fff',
+    marginVertical: 6,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  thumb: { width: 56, height: 56, borderRadius: 8, marginRight: 12 },
-  thumbPlaceholder: { backgroundColor: '#e9e9e9', alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 16, fontWeight: '600' },
-  coords: { fontSize: 12, color: '#555', marginTop: 4 },
+  thumb: { width: 64, height: 64, borderRadius: 10, marginRight: 14 },
+  thumbPlaceholder: {
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  coords: { fontSize: 12, color: '#555' },
 });
