@@ -27,6 +27,26 @@ const FALLBACK_REGION = {
   longitudeDelta: 0.05,
 };
 
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Radio de la Tierra en metros
+  const toRad = (deg) => (deg * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const distance = R * c; // en metros
+  if (distance >= 1000) return `${(distance / 1000).toFixed(1)} km`;
+  return `${Math.round(distance)} m`;
+}
+
 export default function MapScreen() {
   const [location, setLocation] = useState(null);
   const [markers, setMarkers] = useState([
@@ -270,19 +290,19 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={region}
-        showsUserLocation
-        onPress={handleMapPress}
-      >
-        {markers.map(m => (
-          <Marker key={m.id} coordinate={m.coordinate} title={m.title}>
-            {m.photoUri && (
-              <Image source={{ uri: m.photoUri }} style={{ width: 50, height: 50, borderRadius: 25 }} />
-            )}
-          </Marker>
-        ))}
+  <MapView
+    style={styles.map}
+    initialRegion={region}
+    showsUserLocation
+    onPress={handleMapPress}
+  >
+    {markers.map(m => (
+      <Marker key={m.id} coordinate={m.coordinate} title={`${m.title}${location ? ` — Distancia: ${getDistance(location.latitude, location.longitude, m.coordinate.latitude, m.coordinate.longitude)}` : ''}`}>
+        {m.photoUri && (
+          <Image source={{ uri: m.photoUri }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+        )}
+      </Marker>
+    ))}
 
         {selectingLocation && tempCoordinate && (
           <Marker coordinate={tempCoordinate} title="Ubicación seleccionada" />

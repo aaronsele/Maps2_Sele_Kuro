@@ -1,15 +1,20 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, Image, SafeAreaView } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const fallbackLugares = [
-  { id: 1, title: 'Kiosco', coordinate: { latitude: -34.6096, longitude: -58.4303 } },
-  { id: 2, title: 'Casa de Torcha', coordinate: { latitude: -34.5909, longitude: -58.4172 } },
+  { id: 1, title: 'Kiosco', coordinate: { latitude: -34.6096, longitude: -58.4303 }, photoUri: null },
+  { id: 2, title: 'Casa de Torcha', coordinate: { latitude: -34.5909, longitude: -58.4172 }, photoUri: null },
 ];
 
 export default function PlacesScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
   const places = route.params?.places ?? fallbackLugares;
+
+  const goToDetail = (place) => {
+    navigation.navigate('PlaceDetailScreen', { place });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -39,6 +44,9 @@ export default function PlacesScreen() {
                   {lat && lng ? `Lat: ${lat}  |  Lng: ${lng}` : 'Coordenadas no disponibles'}
                 </Text>
               </View>
+              <TouchableOpacity style={styles.detailBtn} onPress={() => goToDetail(item)}>
+                <Text style={styles.detailBtnText}>Ver foto</Text>
+              </TouchableOpacity>
             </View>
           );
         }}
@@ -86,4 +94,12 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
   coords: { fontSize: 12, color: '#555' },
+  detailBtn: {
+    backgroundColor: '#FF9800',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  detailBtnText: { color: '#fff', fontWeight: '700' },
 });

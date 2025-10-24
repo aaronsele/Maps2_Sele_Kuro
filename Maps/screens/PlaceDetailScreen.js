@@ -1,25 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, Dimensions, SafeAreaView } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 
-export default function PlaceDetailScreen({ route }) {
+export default function PlacesDetailScreen() {
+  const route = useRoute();
   const { place } = route.params;
 
+  const screenWidth = Dimensions.get('window').width;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{place.title}</Text>
-      <Text style={styles.coords}>
-        Lat: {place.coordinate.latitude.toFixed(4)}, Lng: {place.coordinate.longitude.toFixed(4)}
-      </Text>
-      {place.photo && (
-        <Image source={{ uri: place.photo }} style={styles.image} />
-      )}
-    </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={{ padding: 16, alignItems: 'center' }}>
+        {place.photoUri ? (
+          <Image
+            source={{ uri: place.photoUri }}
+            style={[styles.image, { width: screenWidth - 32, height: (screenWidth - 32) * 0.75 }]}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Text style={{ color: '#777' }}>No hay foto</Text>
+          </View>
+        )}
+        <Text style={styles.name}>{place.title}</Text>
+        {place.coordinate && (
+          <Text style={styles.coords}>
+            Lat: {place.coordinate.latitude.toFixed(6)} | Lng: {place.coordinate.longitude.toFixed(6)}
+          </Text>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  coords: { fontSize: 16, marginBottom: 20 },
-  image: { width: '100%', height: 300, borderRadius: 10 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  image: {
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 200,
+  },
+  name: { fontSize: 20, fontWeight: '700', marginBottom: 6, textAlign: 'center' },
+  coords: { fontSize: 14, color: '#555', textAlign: 'center' },
 });
