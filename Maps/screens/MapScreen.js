@@ -157,6 +157,7 @@ export default function MapScreen() {
       if (!result.canceled) {
         const images = result.assets?.map(a => ({ uri: a.uri, fileName: a.fileName ?? `CAM_${Date.now()}` })) || [];
         setSelectedImages(prev => [...prev, ...images]);
+        navigation.navigate('PlacesScreen', { places: [...savedPlaces, ...newItems] });
       }
     } catch (e) {
       console.warn('Error al abrir cámara:', e);
@@ -254,6 +255,8 @@ export default function MapScreen() {
 
       setMarkers(prev => [...prev, ...newItems]);
       setSavedPlaces(prev => [...prev, ...newItems]);
+      navigation.navigate('PlacesScreen', { places: [...savedPlaces, ...newItems] });
+
 
       setAddModalVisible(false);
       setPhotoName('');
