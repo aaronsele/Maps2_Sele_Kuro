@@ -147,7 +147,7 @@ export default function MapScreen() {
       if (!ok) return;
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images', // ⚡ minúscula, para evitar errores
+        mediaTypes: 'images', 
         allowsMultipleSelection: true,
         quality: 0.9,
         selectionLimit: 10,
@@ -169,7 +169,7 @@ export default function MapScreen() {
       if (!ok) return;
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'images', // ⚡ minúscula
+        mediaTypes: 'images', 
         quality: 0.9,
         cameraType: ImagePicker.CameraType.back,
       });
