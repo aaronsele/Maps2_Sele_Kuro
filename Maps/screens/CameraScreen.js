@@ -26,13 +26,10 @@ export default function CameraScreen() {
       if (!camPermission?.granted) {
         await requestCamPermission();
       }
-      // OJO: tenías un typo "rquest"
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        // seguimos, pero sin guardar ubicación
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!camPermission) {
